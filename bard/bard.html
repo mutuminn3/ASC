@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>セキレイメン・フラッピー (横向き完全対応版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #020617;
+            overflow: hidden;
+        }
+        /* Mobile Aspect Ratio Container (9:16 Portrait Lock) */
+        .mobile-frame {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            max-width: 480px;
+            aspect-ratio: 9 / 16;
+            margin: 0 auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            background-color: #38bdf8;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        @keyframes pulse-tap {
+            0%, 100% { transform: scale(1); opacity: 0.85; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+        .tap-hint-anim {
+            animation: pulse-tap 1.4s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-slate-950">
+
+    <!-- Mobile Frame Layout -->
+    <div class="mobile-frame rounded-none sm:rounded-3xl border-0 sm:border-8 border-slate-800 flex flex-col justify-between">
+        
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" class="absolute inset-0 z-0"></canvas>
+
+        <!-- UI Overlay Layer -->
+        <div id="uiOverlay" class="relative z-10 w-full h-full flex flex-col justify-between p-5 pointer-events-none">
+            
+            <!-- Header HUD -->
+            <div class="flex items-center justify-between pt-2">
+                <div class="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 shadow-lg">
+                    <h1 class="text-lg font-black text-yellow-300 tracking-wide drop-shadow">
+                        セキレイメン
+                    </h1>
+                    <p class="text-[10px] text-slate-300 font-bold -mt-1 tracking-wider uppercase">
+                        FLAPPY BIRD
+                    </p>
+                </div>
+
+                <!-- Score Board HUD -->
+                <div class="flex gap-2">
+                    <div class="bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-white/20 text-center shadow-lg min-w-[65px]">
+                        <span class="block text-[9px] text-slate-400 font-bold tracking-wider">SCORE</span>
+                        <span id="currentScoreDisplay" class="text-xl font-black text-white leading-tight">0</span>
+                    </div>
+                    <div class="bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-white/20 text-center shadow-lg min-w-[65px]">
+                        <span class="block text-[9px] text-yellow-400/80 font-bold tracking-wider">BEST</span>
+                        <span id="highScoreDisplay" class="text-xl font-black text-yellow-400 leading-tight">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Start Prompt Message -->
+            <div id="centerMessage" class="self-center my-auto text-center bg-slate-900/85 backdrop-blur-md px-6 py-5 rounded-2xl border border-white/20 shadow-2xl transition-all max-w-[85%]">
+                <div class="w-12 h-12 mx-auto mb-2 bg-yellow-400/20 text-yellow-300 rounded-full flex items-center justify-center tap-hint-anim border border-yellow-300/40">
+                    <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                        <path d="M9 11.24V7.5C9 6.12 10.12 5 11.5 5S14 6.12 14 7.5v3.74c1.21-.81 2-2.18 2-3.74C16 5.01 13.99 3 11.5 3S7 5.01 7 7.5c0 1.56.79 2.93 2 3.74zM18.84 15.87l-4.54-2.26c-.32-.16-.68-.25-1.05-.25H12V7.5c0-.83-.67-1.5-1.5-1.5S9 6.67 9 7.5v10.74l-3.44-.72c-.14-.03-.28-.05-.42-.05-.53 0-1.01.21-1.37.56l-.72.72 5.58 5.58c.36.36.86.57 1.38.57h7.28c.95 0 1.77-.67 1.95-1.61l1.04-5.22c.16-.83-.16-1.68-.86-2.19z"/>
+                    </svg>
+                </div>
+                <p id="msgTitle" class="text-xl font-extrabold text-yellow-300 mb-1">タップでスタート！</p>
+                <p id="msgSub" class="text-xs text-slate-200 leading-relaxed">
+                    画面をタップして<br>横向きセキレイメンを飛ばそう！
+                </p>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="buttonArea" class="self-center my-auto pointer-events-none z-20 hidden text-center w-full px-6">
+                <div class="bg-slate-900/90 backdrop-blur-md p-6 rounded-3xl border border-white/20 shadow-2xl">
+                    <p class="text-2xl font-black text-rose-400 mb-1">GAME OVER</p>
+                    <p class="text-sm text-slate-300 mb-4">スコア: <span id="finalScore" class="text-2xl font-black text-yellow-300">0</span></p>
+                    <button id="retryBtn" class="pointer-events-auto w-full bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-slate-950 font-black text-lg py-4 px-8 rounded-2xl shadow-xl border-2 border-yellow-200 transform active:scale-95 transition flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                            <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                        </svg>
+                        もう一度あそぶ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bottom Footnote -->
+            <div class="text-center pb-2">
+                <span class="inline-block bg-slate-900/60 backdrop-blur-sm text-slate-300 text-[11px] px-3 py-1 rounded-full border border-white/10">
+                    📱 タップ / スペースキーで上昇
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+      /*!
+       * Game Title: (ミニゲームのタイトル)
+       * Author: むつみん
+       * Copyright (c) 2026 むつみん
+       */
+        // Sound FX setup (Web Audio API)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            if (type === 'jump') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(700, now + 0.12);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            } else if (type === 'score') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.08);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'hit') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        // Canvas & Frame Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game State Variables
+        let gameState = 'START'; // 'START', 'PLAYING', 'GAMEOVER'
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('sekireimen_high_score') || '0', 10);
+
+        document.getElementById('highScoreDisplay').textContent = highScore;
+
+        // Bird (Sekireimen) Properties - Easy Difficulty Physics
+        const bird = {
+            x: 0,
+            y: 0,
+            width: 70,
+            height: 52,
+            vy: 0,
+            gravity: 0.28,
+            jumpStrength: -6.2,
+            rotation: 0
+        };
+
+        // Pipe & Obstacle Settings
+        const pipeWidth = 64;
+        const pipeGap = 185; // Extra wide gap for easy play
+        const pipeSpeed = 1.9;
+        let pipes = [];
+        let pipeTimer = 0;
+        const pipeSpawnInterval = 115; // Frame interval between pipes
+
+        // Cloud & Environment Background Elements
+        const clouds = [
+            { x: 30, y: 60, scale: 0.9, speed: 0.3 },
+            { x: 220, y: 120, scale: 1.2, speed: 0.5 },
+            { x: 380, y: 80, scale: 0.7, speed: 0.4 }
+        ];
+
+        /*
+         * Draw the Side-View Sekireimen character based directly on the provided 3D reference image
+         */
+        function drawSekireimenSideView(ctx, x, y, width, height, rotation) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+
+            // Scale to match requested width/height
+            const scale = width / 110;
+            ctx.scale(scale, scale);
+
+            // Center of bird is at (0, 0)
+            
+            // --- 1. Long Straight Tail (Sticking out to the left) ---
+            ctx.fillStyle = '#a1a1aa'; // Metallic Light Grey
+            ctx.strokeStyle = '#27272a';
+            ctx.lineWidth = 2.5;
+
+            ctx.save();
+            ctx.translate(-38, 12);
+            ctx.rotate(-0.25); // Slight upward-left angle
+            ctx.beginPath();
+            ctx.roundRect(-38, -6, 42, 12, 5);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // --- 2. Green Blocky Feet ---
+            ctx.fillStyle = '#16a34a';
+            ctx.strokeStyle = '#14532d';
+            ctx.lineWidth = 2.5;
+
+            // Leg Pillars
+            ctx.fillRect(-10, 22, 10, 14);
+            ctx.strokeRect(-10, 22, 10, 14);
+
+            ctx.fillRect(4, 22, 10, 14);
+            ctx.strokeRect(4, 22, 10, 14);
+
+            // Webbed Flat Foot Base
+            ctx.beginPath();
+            ctx.roundRect(-22, 34, 46, 10, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            // --- 3. Bowl / Cup Main Body ---
+            ctx.fillStyle = '#d4d4d8';
+            ctx.strokeStyle = '#27272a';
+            ctx.lineWidth = 2.5;
+
+            ctx.beginPath();
+            ctx.moveTo(-45, -16); // Top-left rim of bowl
+            ctx.lineTo(28, -16);  // Top-right rim
+            ctx.bezierCurveTo(45, -5, 36, 28, 0, 32);  // Front curved chest/bottom
+            ctx.bezierCurveTo(-38, 32, -48, 8, -45, -16); // Back curve
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Flat Top Inside Rim Shadow
+            ctx.fillStyle = '#a1a1aa';
+            ctx.beginPath();
+            ctx.ellipse(-8, -16, 35, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // --- 4. Red 'L' Badge / Logo on Front Cup ---
+            ctx.save();
+            ctx.translate(26, 0);
+            
+            // Red Outer Circular Badge
+            ctx.fillStyle = '#dc2626';
+            ctx.strokeStyle = '#7f1d1d';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 13, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // White Inner Logo ('L' mark)
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(-4, -6);
+            ctx.lineTo(-4, 5);
+            ctx.lineTo(4, 5);
+            ctx.lineTo(4, 1.5);
+            ctx.lineTo(-0.5, 1.5);
+            ctx.lineTo(-0.5, -6);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // --- 5. Side Layered Wing ---
+            ctx.save();
+            ctx.translate(-24, 6);
+            ctx.rotate(0.18);
+            ctx.fillStyle = '#a1a1aa';
+            ctx.strokeStyle = '#27272a';
+            ctx.lineWidth = 2;
+
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.roundRect(0, i * 7, 44 - i * 3, 9, 4);
+                ctx.fill();
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // --- 6. Round Head ---
+            ctx.fillStyle = '#e4e4e7';
+            ctx.strokeStyle = '#27272a';
+            ctx.lineWidth = 2.5;
+
+            ctx.beginPath();
+            ctx.arc(18, -32, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Black Cap/Patch on Top of Head
+            ctx.fillStyle = '#09090b';
+            ctx.beginPath();
+            ctx.arc(18, -32, 22, Math.PI * 1.05, Math.PI * 1.8, false);
+            ctx.fill();
+
+            // Sharp Black Beak (Pointing RIGHT)
+            ctx.fillStyle = '#09090b';
+            ctx.beginPath();
+            ctx.moveTo(38, -34);
+            ctx.lineTo(62, -27); // Tip pointing right
+            ctx.lineTo(37, -20);
+            ctx.closePath();
+            ctx.fill();
+
+            // Dark Side Eye
+            ctx.fillStyle = '#09090b';
+            ctx.beginPath();
+            ctx.ellipse(28, -34, 6, 5, 0.1, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Red Cheek Dot
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(24, -22, 5.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // --- Game Helper Functions ---
+        function resetGame() {
+            bird.x = canvas.width * 0.28;
+            bird.y = canvas.height * 0.42;
+            bird.vy = 0;
+            bird.rotation = 0;
+            pipes = [];
+            pipeTimer = 0;
+            score = 0;
+            document.getElementById('currentScoreDisplay').textContent = '0';
+        }
+
+        function triggerJump() {
+            if (gameState === 'START') {
+                gameState = 'PLAYING';
+                document.getElementById('centerMessage').classList.add('hidden');
+                bird.vy = bird.jumpStrength;
+                playSound('jump');
+            } else if (gameState === 'PLAYING') {
+                bird.vy = bird.jumpStrength;
+                playSound('jump');
+            }
+        }
+
+        function spawnPipe() {
+            const minHeight = 60;
+            const maxHeight = canvas.height - pipeGap - minHeight - 60; // 60px floor margin
+            const topHeight = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+
+            pipes.push({
+                x: canvas.width,
+                topHeight: topHeight,
+                bottomY: topHeight + pipeGap,
+                passed: false
+            });
+        }
+
+        function checkCollision(pipe) {
+            // Generous collision circle radius for comfortable easy gameplay
+            const birdRadius = 20; 
+            const bx = bird.x;
+            const by = bird.y;
+
+            // Canvas Floor and Ceiling limits
+            if (by - birdRadius < 0 || by + birdRadius > canvas.height - 40) {
+                return true;
+            }
+
+            // Pipe Horizontal Bounds
+            if (bx + birdRadius > pipe.x && bx - birdRadius < pipe.x + pipeWidth) {
+                // Top or Bottom Pipe Collision
+                if (by - birdRadius < pipe.topHeight || by + birdRadius > pipe.bottomY) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            playSound('hit');
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('sekireimen_high_score', highScore);
+                document.getElementById('highScoreDisplay').textContent = highScore;
+            }
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('buttonArea').classList.remove('hidden');
+        }
+
+        function update() {
+            // Cloud Scrolling Animation
+            clouds.forEach(c => {
+                c.x -= c.speed;
+                if (c.x < -100) c.x = canvas.width + 50;
+            });
+
+            if (gameState === 'PLAYING') {
+                // Apply Gravity and Movement
+                bird.vy += bird.gravity;
+                bird.y += bird.vy;
+
+                // Smooth Rotation Angle Calculation
+                bird.rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 6, bird.vy * 0.08));
+
+                // Pipe Spawning & Updating
+                pipeTimer++;
+                if (pipeTimer >= pipeSpawnInterval) {
+                    spawnPipe();
+                    pipeTimer = 0;
+                }
+
+                for (let i = pipes.length - 1; i >= 0; i--) {
+                    const p = pipes[i];
+                    p.x -= pipeSpeed;
+
+                    // Score increment check
+                    if (!p.passed && p.x + pipeWidth < bird.x) {
+                        p.passed = true;
+                        score++;
+                        document.getElementById('currentScoreDisplay').textContent = score;
+                        playSound('score');
+                    }
+
+                    // Collision Check
+                    if (checkCollision(p)) {
+                        gameOver();
+                    }
+
+                    // Remove Offscreen Pipes
+                    if (p.x + pipeWidth < -20) {
+                        pipes.splice(i, 1);
+                    }
+                }
+
+                // Check Floor Bound
+                if (bird.y + 20 >= canvas.height - 40) {
+                    gameOver();
+                }
+            } else if (gameState === 'START') {
+                // Gentle Floating Hover Motion
+                bird.y = canvas.height * 0.42 + Math.sin(Date.now() * 0.004) * 8;
+                bird.rotation = 0;
+            }
+        }
+
+        function draw() {
+            // 1. Sky & Background Gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGrad.addColorStop(0, '#38bdf8'); // Bright Sky Blue
+            skyGrad.addColorStop(0.7, '#7dd3fc');
+            skyGrad.addColorStop(1, '#bae6fd');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Draw Clouds
+            clouds.forEach(c => {
+                ctx.save();
+                ctx.translate(c.x, c.y);
+                ctx.scale(c.scale, c.scale);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.beginPath();
+                ctx.arc(0, 0, 20, 0, Math.PI * 2);
+                ctx.arc(18, -10, 22, 0, Math.PI * 2);
+                ctx.arc(40, 0, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 3. Draw Pipes (Retro Green Style with Borders)
+            pipes.forEach(p => {
+                // Pipe Body Styling
+                const pipeGrad = ctx.createLinearGradient(p.x, 0, p.x + pipeWidth, 0);
+                pipeGrad.addColorStop(0, '#22c55e');
+                pipeGrad.addColorStop(0.3, '#4ade80');
+                pipeGrad.addColorStop(0.8, '#16a34a');
+                pipeGrad.addColorStop(1, '#15803d');
+
+                ctx.fillStyle = pipeGrad;
+                ctx.strokeStyle = '#14532d';
+                ctx.lineWidth = 3;
+
+                // Top Pipe
+                ctx.fillRect(p.x, 0, pipeWidth, p.topHeight);
+                ctx.strokeRect(p.x, 0, pipeWidth, p.topHeight);
+                // Top Pipe Lip Rim
+                ctx.fillRect(p.x - 4, p.topHeight - 24, pipeWidth + 8, 24);
+                ctx.strokeRect(p.x - 4, p.topHeight - 24, pipeWidth + 8, 24);
+
+                // Bottom Pipe
+                const bottomHeight = canvas.height - 40 - p.bottomY;
+                ctx.fillRect(p.x, p.bottomY, pipeWidth, bottomHeight);
+                ctx.strokeRect(p.x, p.bottomY, pipeWidth, bottomHeight);
+                // Bottom Pipe Lip Rim
+                ctx.fillRect(p.x - 4, p.bottomY, pipeWidth + 8, 24);
+                ctx.strokeRect(p.x - 4, p.bottomY, pipeWidth + 8, 24);
+            });
+
+            // 4. Ground / Floor
+            const groundY = canvas.height - 40;
+            ctx.fillStyle = '#22c55e'; // Green Grass
+            ctx.fillRect(0, groundY, canvas.width, 12);
+            ctx.fillStyle = '#b45309'; // Dirt Earth
+            ctx.fillRect(0, groundY + 12, canvas.width, 28);
+
+            ctx.strokeStyle = '#14532d';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.stroke();
+
+            // 5. Draw Character (Sekireimen Side View)
+            drawSekireimenSideView(ctx, bird.x, bird.y, bird.width, bird.height, bird.rotation);
+        }
+
+        // Main Loop Function
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (gameState === 'GAMEOVER') {
+                    restartGame();
+                } else {
+                    triggerJump();
+                }
+            }
+        });
+
+        // Touch and Mouse Tap Control
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            if (gameState !== 'GAMEOVER') {
+                triggerJump();
+            }
+        });
+
+        // Retry Button Listener
+        document.getElementById('retryBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            restartGame();
+        });
+
+        function restartGame() {
+            resetGame();
+            gameState = 'START';
+            document.getElementById('buttonArea').classList.add('hidden');
+            document.getElementById('centerMessage').classList.remove('hidden');
+        }
+
+        // Initialize and Start
+        resetGame();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
