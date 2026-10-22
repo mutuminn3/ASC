@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麺-Beat Fever</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .glow-text {
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.7), 0 0 30px rgba(56, 189, 248, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-center overflow-hidden">
+
+    <div id="app" class="w-full max-w-md h-[92vh] max-h-[880px] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col relative overflow-hidden">
+        
+        <!-- Top Header & Stats -->
+        <header class="px-6 py-4 flex justify-between items-center bg-slate-900/90 backdrop-blur z-20 border-b border-slate-800/60">
+            <div>
+                <h1 class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Arcade Rhythm</h1>
+                <p class="text-lg font-black tracking-wider bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">麺-BEAT FEVER</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <div class="text-right">
+                    <div class="text-[10px] text-slate-400 uppercase tracking-widest">Score</div>
+                    <div id="score-display" class="text-xl font-black font-mono tracking-tight text-sky-300">000000</div>
+                </div>
+                <!-- 一時停止ボタン -->
+                <button onclick="pauseGame()" class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 hover:bg-slate-700 active:scale-95 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Life Gauge Bar -->
+        <div class="w-full h-1.5 bg-slate-800 relative z-20 overflow-hidden">
+            <div id="life-bar" class="h-full bg-gradient-to-r from-emerald-500 to-sky-400 w-full transition-all duration-200"></div>
+        </div>
+
+        <!-- Song Progress Bar -->
+        <div class="w-full h-1 bg-slate-900 relative z-20 overflow-hidden">
+            <div id="progress-bar" class="h-full bg-sky-400 w-0 transition-all duration-100"></div>
+        </div>
+
+        <!-- Start Screen View -->
+        <div id="view-start" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-40 bg-slate-950/95 backdrop-blur-md transition-opacity duration-300 overflow-y-auto">
+            <div class="w-16 h-16 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-sky-500/40 mb-3 animate-pulse">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+            </div>
+            <h2 class="text-2xl font-black text-center mb-1 tracking-tight glow-text">麺-BEAT FEVER</h2>
+            <p class="text-slate-400 text-xs text-center mb-3 max-w-xs leading-relaxed">楽曲・動画と難易度を選んでスタート！</p>
+
+            <!-- Song Select Area -->
+            <div class="w-full max-w-xs space-y-2 mb-4">
+                <div onclick="selectSong('donburi')" id="song-opt-donburi" class="p-2.5 rounded-xl bg-slate-800/80 border-2 border-sky-500 cursor-pointer transition-all">
+                    <div class="text-xs font-bold text-sky-300">どんぶりペンギンのダンス</div>
+                    <div class="text-[10px] text-slate-400">BPM 160 / Hyperpop</div>
+                </div>
+
+                <div onclick="selectSong('synth')" id="song-opt-synth" class="p-2.5 rounded-xl bg-slate-800/40 border-2 border-slate-700/60 cursor-pointer transition-all">
+                    <div class="text-xs font-bold text-slate-200">シンセ・ビート・フィーバー</div>
+                    <div class="text-[10px] text-slate-400">BPM 130 / Web Synth BGM</div>
+                </div>
+
+                <div onclick="selectSong('cyber')" id="song-opt-cyber" class="p-2.5 rounded-xl bg-slate-800/40 border-2 border-slate-700/60 cursor-pointer transition-all">
+                    <div class="text-xs font-bold text-slate-200">電脳サイバー・ランデブー</div>
+                    <div class="text-[10px] text-slate-400">BPM 145 / Cyber Pop</div>
+                </div>
+
+                <div onclick="selectSong('mystery')" id="song-opt-mystery" class="p-2.5 rounded-xl bg-slate-800/40 border-2 border-slate-700/60 cursor-pointer transition-all">
+                    <div class="text-xs font-bold text-slate-200">ネオン街のミステリー</div>
+                    <div class="text-[10px] text-slate-400">BPM 120 / Electro Groove</div>
+                </div>
+
+                <label id="file-opt-box" for="file-input" class="p-2.5 rounded-xl bg-slate-800/40 border-2 border-dashed border-slate-700 hover:border-slate-500 cursor-pointer transition-all flex justify-between items-center block">
+                    <div>
+                        <div id="file-label-title" class="text-xs font-bold text-slate-300">音楽・動画ファイルを選択</div>
+                        <div id="file-label-sub" class="text-[10px] text-slate-500">mp3, m4a, wav, mp4, webm 対応</div>
+                    </div>
+                    <span class="text-[10px] font-bold text-indigo-400 bg-indigo-950/60 px-2 py-1 rounded">FILE</span>
+                </label>
+                <input type="file" id="file-input" accept="audio/*,video/*" class="hidden" onchange="handleFileUpload(event)">
+            </div>
+
+            <!-- Difficulty Selector -->
+            <div class="w-full max-w-xs mb-5">
+                <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5">Difficulty</div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="selectDiff('easy')" id="diff-easy" class="py-2 rounded-xl bg-slate-800/40 border border-slate-700 text-xs font-bold text-slate-400 transition-all">EASY</button>
+                    <button onclick="selectDiff('normal')" id="diff-normal" class="py-2 rounded-xl bg-sky-500/20 border-2 border-sky-500 text-xs font-bold text-sky-300 transition-all">NORMAL</button>
+                    <button onclick="selectDiff('hard')" id="diff-hard" class="py-2 rounded-xl bg-slate-800/40 border border-slate-700 text-xs font-bold text-slate-400 transition-all">HARD</button>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="w-full max-w-xs py-3.5 bg-gradient-to-r from-sky-500 to-indigo-600 rounded-2xl font-extrabold tracking-wider text-base shadow-xl shadow-sky-500/30 active:scale-95 transition-transform hover:brightness-110">
+                ゲームスタート
+            </button>
+        </div>
+
+        <!-- Play Area View -->
+        <div id="view-play" class="flex-1 relative overflow-hidden flex flex-col">
+            
+            <!-- Countdown Overlay -->
+            <div id="countdown-overlay" class="absolute inset-0 flex items-center justify-center z-30 pointer-events-none bg-slate-950/40 backdrop-blur-[2px] hidden">
+                <div id="countdown-text" class="text-8xl font-black italic text-sky-400 glow-text scale-125 transition-all duration-300">3</div>
+            </div>
+
+            <!-- Combo & Feedback overlay -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+                <div id="feedback-text" class="text-3xl font-black italic opacity-0 transition-all duration-100 transform scale-75">PERFECT</div>
+                <div id="combo-display" class="text-6xl font-black font-mono text-amber-400 mt-2 opacity-0 transition-opacity">0</div>
+                <div id="combo-label" class="text-[10px] uppercase font-bold text-slate-400 tracking-widest opacity-0">Combo</div>
+            </div>
+
+            <!-- Notes & Lane Canvas Container -->
+            <div class="flex-1 relative overflow-hidden bg-slate-950">
+                <video id="bg-video" class="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none hidden" muted playsinline></video>
+
+                <div class="absolute inset-0 flex justify-between px-[12.5%] pointer-events-none opacity-20 z-0">
+                    <div class="w-[1px] h-full bg-slate-700"></div>
+                    <div class="w-[1px] h-full bg-slate-700"></div>
+                    <div class="w-[1px] h-full bg-slate-700"></div>
+                </div>
+                <canvas id="game-canvas" class="absolute inset-0 w-full h-full z-10"></canvas>
+            </div>
+
+            <!-- Judgment Line & Touch/Key Buttons -->
+            <div class="h-32 bg-slate-900 border-t border-slate-800 grid grid-cols-4 gap-1.5 p-2.5 relative z-20">
+                <div class="lane-btn flex flex-col items-center justify-end pb-3 rounded-2xl bg-slate-800/40 border border-slate-700/40 active:bg-rose-500/25 transition-colors cursor-pointer select-none" data-lane="0">
+                    <span class="text-xs font-mono font-bold text-slate-400 mb-1">D</span>
+                    <div class="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/50 flex items-center justify-center text-rose-400 text-xs font-black shadow-lg shadow-rose-500/20">1</div>
+                </div>
+                <div class="lane-btn flex flex-col items-center justify-end pb-3 rounded-2xl bg-slate-800/40 border border-slate-700/40 active:bg-blue-500/25 transition-colors cursor-pointer select-none" data-lane="1">
+                    <span class="text-xs font-mono font-bold text-slate-400 mb-1">F</span>
+                    <div class="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-500/50 flex items-center justify-center text-blue-400 text-xs font-black shadow-lg shadow-blue-500/20">2</div>
+                </div>
+                <div class="lane-btn flex flex-col items-center justify-end pb-3 rounded-2xl bg-slate-800/40 border border-slate-700/40 active:bg-emerald-500/25 transition-colors cursor-pointer select-none" data-lane="2">
+                    <span class="text-xs font-mono font-bold text-slate-400 mb-1">J</span>
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-xs font-black shadow-lg shadow-emerald-500/20">3</div>
+                </div>
+                <div class="lane-btn flex flex-col items-center justify-end pb-3 rounded-2xl bg-slate-800/40 border border-slate-700/40 active:bg-amber-500/25 transition-colors cursor-pointer select-none" data-lane="3">
+                    <span class="text-xs font-mono font-bold text-slate-400 mb-1">K</span>
+                    <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 text-xs font-black shadow-lg shadow-amber-500/20">4</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pause Menu Overlay -->
+        <div id="view-pause" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-50 bg-slate-950/85 backdrop-blur-md hidden">
+            <h2 class="text-2xl font-black mb-6 tracking-wider glow-text">PAUSE</h2>
+            <div class="w-full max-w-xs space-y-3">
+                <button onclick="resumeGame()" class="w-full py-3.5 bg-slate-800 border border-slate-700 rounded-2xl font-bold tracking-wider hover:bg-slate-700 active:scale-95 transition-all">
+                    ゲームを続ける
+                </button>
+                <button onclick="cancelToStart()" class="w-full py-3.5 bg-rose-500/20 border border-rose-500/50 text-rose-300 rounded-2xl font-bold tracking-wider hover:bg-rose-500/30 active:scale-95 transition-all">
+                    キャンセル（曲選択へ戻る）
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Screen View -->
+        <div id="view-result" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-50 bg-slate-950/95 backdrop-blur-md hidden">
+            <h2 class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Live Result</h2>
+            <h3 id="result-rank" class="text-7xl font-black tracking-tight mb-4 bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">S</h3>
+            
+            <div class="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-3xl p-5 mb-6 space-y-3.5 shadow-xl">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">Total Score</span>
+                    <span id="res-score" class="font-mono font-bold text-lg text-sky-300">0</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">Max Combo</span>
+                    <span id="res-combo" class="font-mono font-bold text-lg text-amber-300">0</span>
+                </div>
+                <div class="grid grid-cols-4 gap-1 pt-3 border-t border-slate-800 text-center">
+                    <div>
+                        <div class="text-[9px] text-emerald-400 font-bold uppercase">Perf</div>
+                        <div id="res-perfect" class="font-mono font-bold text-xs">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-sky-400 font-bold uppercase">Great</div>
+                        <div id="res-great" class="font-mono font-bold text-xs">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-amber-400 font-bold uppercase">Good</div>
+                        <div id="res-good" class="font-mono font-bold text-xs">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[9px] text-rose-400 font-bold uppercase">Miss</div>
+                        <div id="res-miss" class="font-mono font-bold text-xs">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="resetToStart()" class="w-full max-w-xs py-4 bg-gradient-to-r from-sky-500 to-indigo-600 rounded-2xl font-extrabold tracking-wider text-base shadow-xl shadow-sky-500/30 active:scale-95 transition-transform hover:brightness-110">
+                もう一度プレイ
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+      /*!
+       * Game Title: (ミニゲームのタイトル)
+       * Author: むつみん
+       * Copyright (c) 2026 むつみん
+       */
+        let audioCtx = null;
+        let isPlaying = false;
+        let isPaused = false;
+        let pauseStartTime = 0;
+        let totalPausedTime = 0;
+
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let life = 100;
+        let stats = { perfect: 0, great: 0, good: 0, miss: 0 };
+        
+        let startTime = 0;
+        let notes = [];
+        let canvas, ctx;
+        let animationFrameId = null;
+        let nextBeatIndex = 0;
+        let bpm = 160;
+        let beatInterval = 60 / bpm;
+        let selectedSongMode = 'donburi'; 
+        let selectedDifficulty = 'normal'; 
+        let customAudioBuffer = null;
+        let currentAudioSource = null;
+        let customVideoUrl = null;
+        let songDuration = 0;
+
+        const baseChartDonburi = [
+            { time: 1.0, lane: 0 }, { time: 1.375, lane: 1 }, { time: 1.75, lane: 2 }, { time: 2.125, lane: 3 },
+            { time: 2.5, lane: 1 }, { time: 2.875, lane: 2 }, { time: 3.25, lane: 0 }, { time: 3.625, lane: 3 },
+            { time: 4.0, lane: 0 }, { time: 4.1875, lane: 1 }, { time: 4.375, lane: 2 }, { time: 4.5625, lane: 3 },
+            { time: 5.0, lane: 2 }, { time: 5.375, lane: 1 }, { time: 5.75, lane: 0 }, { time: 6.125, lane: 3 },
+            { time: 6.5, lane: 1 }, { time: 6.875, lane: 2 }, { time: 7.25, lane: 0 }, { time: 7.625, lane: 3 },
+            { time: 8.0, lane: 0 }, { time: 8.25, lane: 1 }, { time: 8.5, lane: 2 }, { time: 8.75, lane: 3 },
+            { time: 9.25, lane: 2 }, { time: 9.5, lane: 1 }, { time: 9.75, lane: 0 }, { time: 10.0, lane: 3 },
+            { time: 10.5, lane: 1 }, { time: 10.875, lane: 2 }, { time: 11.25, lane: 0 }, { time: 11.625, lane: 3 },
+            { time: 12.0, lane: 0 }, { time: 12.25, lane: 2 }, { time: 12.5, lane: 1 }, { time: 12.75, lane: 3 },
+            { time: 13.125, lane: 0 }, { time: 13.5, lane: 2 }, { time: 13.875, lane: 1 }, { time: 14.25, lane: 3 },
+            { time: 14.625, lane: 2 }, { time: 15.0, lane: 0 }, { time: 15.375, lane: 1 }, { time: 15.75, lane: 3 },
+            { time: 16.125, lane: 0 }, { time: 16.5, lane: 2 }, { time: 16.875, lane: 1 }, { time: 17.25, lane: 3 },
+            { time: 17.625, lane: 2 }, { time: 18.0, lane: 0 }, { time: 18.375, lane: 3 }, { time: 18.75, lane: 1 },
+            { time: 19.125, lane: 2 }, { time: 19.5, lane: 0 }, { time: 19.875, lane: 3 }, { time: 20.25, lane: 1 },
+            { time: 20.625, lane: 2 }, { time: 21.0, lane: 0 }, { time: 21.375, lane: 3 }, { time: 21.75, lane: 1 }
+        ];
+
+        const baseChartSynth = [
+            { time: 1.0, lane: 0 }, { time: 1.5, lane: 1 }, { time: 2.0, lane: 2 }, { time: 2.5, lane: 3 },
+            { time: 3.0, lane: 1 }, { time: 3.25, lane: 2 }, { time: 3.5, lane: 1 }, { time: 4.0, lane: 0 }, { time: 4.5, lane: 3 },
+            { time: 5.0, lane: 2 }, { time: 5.5, lane: 0 }, { time: 6.0, lane: 3 }, { time: 6.5, lane: 1 },
+            { time: 7.0, lane: 0 }, { time: 7.25, lane: 1 }, { time: 7.5, lane: 2 }, { time: 7.75, lane: 3 },
+            { time: 8.5, lane: 1 }, { time: 9.0, lane: 2 }, { time: 9.5, lane: 0 }, { time: 10.0, lane: 3 },
+            { time: 10.5, lane: 0 }, { time: 10.75, lane: 2 }, { time: 11.25, lane: 1 }, { time: 11.5, lane: 3 },
+            { time: 12.0, lane: 0 }, { time: 12.5, lane: 1 }, { time: 13.0, lane: 2 }, { time: 13.5, lane: 3 },
+            { time: 14.0, lane: 3 }, { time: 14.25, lane: 2 }, { time: 14.5, lane: 1 }, { time: 15.0, lane: 0 },
+            { time: 15.5, lane: 0 }, { time: 15.75, lane: 1 }, { time: 16.25, lane: 2 }, { time: 16.5, lane: 3 }
+        ];
+
+        const baseChartCyber = [
+            { time: 1.0, lane: 0 }, { time: 1.4, lane: 2 }, { time: 1.8, lane: 1 }, { time: 2.2, lane: 3 },
+            { time: 2.8, lane: 0 }, { time: 3.0, lane: 3 }, { time: 3.4, lane: 1 }, { time: 3.8, lane: 2 },
+            { time: 4.4, lane: 0 }, { time: 4.8, lane: 1 }, { time: 5.2, lane: 2 }, { time: 5.6, lane: 3 },
+            { time: 6.2, lane: 3 }, { time: 6.6, lane: 2 }, { time: 7.0, lane: 1 }, { time: 7.4, lane: 0 },
+            { time: 8.0, lane: 1 }, { time: 8.4, lane: 3 }, { time: 8.8, lane: 0 }, { time: 9.2, lane: 2 },
+            { time: 9.8, lane: 0 }, { time: 10.2, lane: 1 }, { time: 10.6, lane: 2 }, { time: 11.0, lane: 3 }
+        ];
+
+        const baseChartMystery = [
+            { time: 1.2, lane: 1 }, { time: 1.8, lane: 2 }, { time: 2.4, lane: 0 }, { time: 3.0, lane: 3 },
+            { time: 3.8, lane: 2 }, { time: 4.4, lane: 1 }, { time: 5.0, lane: 3 }, { time: 5.6, lane: 0 },
+            { time: 6.4, lane: 0 }, { time: 7.0, lane: 2 }, { time: 7.6, lane: 1 }, { time: 8.2, lane: 3 },
+            { time: 9.0, lane: 3 }, { time: 9.6, lane: 1 }, { time: 10.2, lane: 2 }, { time: 10.8, lane: 0 }
+        ];
+
+        let activeChart = [];
+
+        window.onload = () => {
+            canvas = document.getElementById('game-canvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            setupInputs();
+            updateChartByDifficulty();
+        };
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function selectSong(mode) {
+            selectedSongMode = mode;
+            customAudioBuffer = null;
+            customVideoUrl = null;
+
+            document.getElementById('file-label-title').innerText = '音楽・動画ファイルを選択';
+            document.getElementById('file-label-sub').innerText = 'mp3, m4a, wav, mp4, webm 対応';
+            document.getElementById('file-opt-box').className = 'p-2.5 rounded-xl bg-slate-800/40 border-2 border-dashed border-slate-700 hover:border-slate-500 cursor-pointer transition-all flex justify-between items-center block';
+
+            ['donburi', 'synth', 'cyber', 'mystery'].forEach(m => {
+                const el = document.getElementById(`song-opt-${m}`);
+                if (m === mode) {
+                    el.className = 'p-2.5 rounded-xl bg-slate-800/80 border-2 border-sky-500 cursor-pointer transition-all';
+                } else {
+                    el.className = 'p-2.5 rounded-xl bg-slate-800/40 border-2 border-slate-700/60 cursor-pointer transition-all';
+                }
+            });
+
+            if (mode === 'donburi') {
+                bpm = 160;
+            } else if (mode === 'synth') {
+                bpm = 130;
+            } else if (mode === 'cyber') {
+                bpm = 145;
+            } else if (mode === 'mystery') {
+                bpm = 120;
+            }
+            beatInterval = 60 / bpm;
+            updateChartByDifficulty();
+        }
+
+        function selectDiff(diff) {
+            selectedDifficulty = diff;
+            ['easy', 'normal', 'hard'].forEach(d => {
+                const btn = document.getElementById(`diff-${d}`);
+                if (d === diff) {
+                    btn.className = 'py-2 rounded-xl bg-sky-500/20 border-2 border-sky-500 text-xs font-bold text-sky-300 transition-all';
+                } else {
+                    btn.className = 'py-2 rounded-xl bg-slate-800/40 border border-slate-700 text-xs font-bold text-slate-400 transition-all';
+                }
+            });
+            updateChartByDifficulty();
+        }
+
+        function updateChartByDifficulty() {
+            let base = baseChartDonburi;
+            if (selectedSongMode === 'synth') base = baseChartSynth;
+            if (selectedSongMode === 'cyber') base = baseChartCyber;
+            if (selectedSongMode === 'mystery') base = baseChartMystery;
+            if (selectedSongMode === 'custom') return;
+
+            if (selectedDifficulty === 'easy') {
+                activeChart = base.filter((_, i) => i % 2 === 0);
+            } else if (selectedDifficulty === 'normal') {
+                activeChart = [...base];
+            } else {
+                let hardNotes = [];
+                base.forEach(n => {
+                    hardNotes.push(n);
+                    hardNotes.push({ time: n.time + 0.18, lane: (n.lane + 1) % 4 });
+                });
+                activeChart = hardNotes.sort((a,b) => a.time - b.time);
+            }
+            if (activeChart.length > 0) {
+                songDuration = activeChart[activeChart.length - 1].time + beatInterval;
+            }
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            initAudio();
+            const isVideo = file.type.startsWith('video');
+
+            if (isVideo) {
+                customVideoUrl = URL.createObjectURL(file);
+            } else {
+                customVideoUrl = null;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                audioCtx.decodeAudioData(evt.target.result, (buffer) => {
+                    customAudioBuffer = buffer;
+                    selectedSongMode = 'custom';
+
+                    ['donburi', 'synth', 'cyber', 'mystery'].forEach(m => {
+                        document.getElementById(`song-opt-${m}`).className = 'p-2.5 rounded-xl bg-slate-800/40 border-2 border-slate-700/60 cursor-pointer transition-all';
+                    });
+                    
+                    document.getElementById('file-opt-box').className = 'p-2.5 rounded-xl bg-slate-800/80 border-2 border-sky-500 cursor-pointer transition-all flex justify-between items-center block';
+                    document.getElementById('file-label-title').innerText = file.name;
+                    document.getElementById('file-label-sub').innerText = isVideo ? '動画ファイル（音声抽出）読込完了' : '音楽ファイル読込完了';
+
+                    const duration = buffer.duration;
+                    songDuration = duration;
+                    bpm = 140;
+                    beatInterval = 60 / bpm;
+                    
+                    let step = 0.8;
+                    if (selectedDifficulty === 'easy') step = 1.2;
+                    if (selectedDifficulty === 'hard') step = 0.35;
+
+                    activeChart = [];
+                    for (let t = 1.0; t < duration - 2.0; t += step) {
+                        const lane = Math.floor(Math.random() * 4);
+                        activeChart.push({ time: parseFloat(t.toFixed(2)), lane: lane });
+                    }
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function playHitSound(lane) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            const frequencies = [261.63, 329.63, 392.00, 523.25];
+            osc.frequency.setValueAtTime(frequencies[lane] || 440, audioCtx.currentTime);
+            osc.type = 'triangle';
+
+            gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.12);
+        }
+
+        function scheduleBGM() {
+            if (!audioCtx || !isPlaying || isPaused) return;
+            if (selectedSongMode === 'custom') return;
+
+            const songTime = (audioCtx.currentTime - totalPausedTime) - startTime;
+            
+            while (nextBeatIndex * (beatInterval / 2) < songTime + 0.6) {
+                const stepTime = startTime + totalPausedTime + (nextBeatIndex * (beatInterval / 2));
+                const beat = Math.floor(nextBeatIndex / 2);
+                const sub = nextBeatIndex % 2;
+
+                if (selectedSongMode === 'donburi') {
+                    if (sub === 0) playKick(stepTime, beat % 2 === 0);
+                    playDonburiSynthNote(stepTime, nextBeatIndex);
+                } else if (selectedSongMode === 'synth') {
+                    if (sub === 0) playKick(stepTime, beat % 4 === 0);
+                    playSynthNote(stepTime, nextBeatIndex);
+                } else if (selectedSongMode === 'cyber') {
+                    if (sub === 0) playKick(stepTime, true);
+                    playCyberNote(stepTime, nextBeatIndex);
+                } else if (selectedSongMode === 'mystery') {
+                    if (sub === 0) playKick(stepTime, beat % 2 === 0);
+                    playMysteryNote(stepTime, nextBeatIndex);
+                }
+                nextBeatIndex++;
+            }
+        }
+
+        function playKick(time, isHeavy) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.frequency.setValueAtTime(isHeavy ? 160 : 110, time);
+            osc.frequency.exponentialRampToValueAtTime(30, time + 0.08);
+
+            gain.gain.setValueAtTime(isHeavy ? 0.5 : 0.3, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(time);
+            osc.stop(time + 0.08);
+        }
+
+        function playSynthNote(time, index) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+            osc.frequency.setValueAtTime(scale[(index * 3) % scale.length], time);
+            osc.type = 'sawtooth';
+            gain.gain.setValueAtTime(0.06, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.25);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(time);
+            osc.stop(time + 0.25);
+        }
+
+        function playDonburiSynthNote(time, index) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const scale = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50];
+            osc.frequency.setValueAtTime(scale[(index * 5) % scale.length], time);
+            osc.type = 'square';
+            gain.gain.setValueAtTime(0.05, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(time);
+            osc.stop(time + 0.15);
+        }
+
+        function playCyberNote(time, index) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const scale = [440.00, 523.25, 659.25, 783.99, 880.00, 1046.50];
+            osc.frequency.setValueAtTime(scale[index % scale.length], time);
+            osc.type = 'sawtooth';
+            gain.gain.setValueAtTime(0.06, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(time);
+            osc.stop(time + 0.18);
+        }
+
+        function playMysteryNote(time, index) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const scale = [329.63, 392.00, 440.00, 493.88, 587.33];
+            osc.frequency.setValueAtTime(scale[(index * 2) % scale.length], time);
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.08, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(time);
+            osc.stop(time + 0.3);
+        }
+
+        function startGame() {
+            initAudio();
+            document.getElementById('view-start').classList.add('opacity-0', 'pointer-events-none');
+            
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            life = 100;
+            stats = { perfect: 0, great: 0, good: 0, miss: 0 };
+            nextBeatIndex = 0;
+            isPaused = false;
+            totalPausedTime = 0;
+            updateScoreDisplay();
+            updateLifeBar();
+            updateProgressBar(0);
+
+            notes = JSON.parse(JSON.stringify(activeChart));
+            notes.forEach(n => { n.hit = false; n.missed = false; });
+
+            if (notes.length > 0) {
+                songDuration = notes[notes.length - 1].time + beatInterval;
+            }
+
+            runCountdown(3, () => {
+                startTime = audioCtx.currentTime;
+                isPlaying = true;
+
+                if (selectedSongMode === 'custom' && customAudioBuffer) {
+                    if (currentAudioSource) currentAudioSource.stop();
+                    currentAudioSource = audioCtx.createBufferSource();
+                    currentAudioSource.buffer = customAudioBuffer;
+                    currentAudioSource.connect(audioCtx.destination);
+                    currentAudioSource.start(startTime);
+                    songDuration = customAudioBuffer.duration;
+                }
+
+                const bgVideo = document.getElementById('bg-video');
+                if (customVideoUrl) {
+                    bgVideo.src = customVideoUrl;
+                    bgVideo.classList.remove('hidden');
+                    bgVideo.currentTime = 0;
+                    bgVideo.play().catch(e => console.log(e));
+                } else {
+                    bgVideo.classList.add('hidden');
+                }
+
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                gameLoop();
+            });
+        }
+
+        function runCountdown(count, callback) {
+            const overlay = document.getElementById('countdown-overlay');
+            const textEl = document.getElementById('countdown-text');
+            overlay.classList.remove('hidden');
+
+            function step(c) {
+                if (c > 0) {
+                    textEl.innerText = c;
+                    textEl.className = 'text-8xl font-black italic text-sky-400 glow-text scale-125 transition-all duration-300';
+                    setTimeout(() => {
+                        textEl.className = 'text-8xl font-black italic text-sky-400 glow-text scale-100 opacity-80 transition-all duration-300';
+                    }, 50);
+                    setTimeout(() => step(c - 1), 1000);
+                } else {
+                    textEl.innerText = 'GO!';
+                    textEl.className = 'text-7xl font-black italic text-emerald-400 glow-text scale-125 transition-all duration-200';
+                    setTimeout(() => {
+                        overlay.classList.add('hidden');
+                        callback();
+                    }, 500);
+                }
+            }
+            step(count);
+        }
+
+        function pauseGame() {
+            if (!isPlaying || isPaused) return;
+            isPaused = true;
+            pauseStartTime = audioCtx.currentTime;
+
+            if (selectedSongMode === 'custom' && currentAudioSource) {
+                try { currentAudioSource.stop(); } catch(e){}
+            }
+            const bgVideo = document.getElementById('bg-video');
+            bgVideo.pause();
+
+            document.getElementById('view-pause').classList.remove('hidden');
+        }
+
+        function resumeGame() {
+            if (!isPaused) return;
+            isPaused = false;
+            totalPausedTime += (audioCtx.currentTime - pauseStartTime);
+
+            if (selectedSongMode === 'custom' && customAudioBuffer) {
+                if (currentAudioSource) currentAudioSource.stop();
+                currentAudioSource = audioCtx.createBufferSource();
+                currentAudioSource.buffer = customAudioBuffer;
+                currentAudioSource.connect(audioCtx.destination);
+                const playOffset = (audioCtx.currentTime - totalPausedTime) - startTime;
+                if (playOffset > 0) {
+                    currentAudioSource.start(audioCtx.currentTime, playOffset);
+                } else {
+                    currentAudioSource.start(startTime + totalPausedTime);
+                }
+            }
+
+            const bgVideo = document.getElementById('bg-video');
+            if (customVideoUrl) {
+                bgVideo.play().catch(e => console.log(e));
+            }
+
+            document.getElementById('view-pause').classList.add('hidden');
+            gameLoop();
+        }
+
+        function cancelToStart() {
+            isPaused = false;
+            isPlaying = false;
+            if (currentAudioSource) {
+                try { currentAudioSource.stop(); } catch(e){}
+            }
+            const bgVideo = document.getElementById('bg-video');
+            bgVideo.pause();
+            bgVideo.classList.add('hidden');
+
+            document.getElementById('view-pause').classList.add('hidden');
+            document.getElementById('view-start').classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function resetToStart() {
+            if (currentAudioSource) {
+                try { currentAudioSource.stop(); } catch(e){}
+            }
+            const bgVideo = document.getElementById('bg-video');
+            bgVideo.pause();
+            bgVideo.classList.add('hidden');
+
+            document.getElementById('view-result').classList.add('hidden');
+            document.getElementById('view-start').classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        const keyLaneMap = { 'KeyD': 0, 'KeyF': 1, 'KeyJ': 2, 'KeyK': 3, 'ArrowLeft': 0, 'ArrowDown': 1, 'ArrowUp': 2, 'ArrowRight': 3 };
+
+        function setupInputs() {
+            window.addEventListener('keydown', (e) => {
+                if (!isPlaying || isPaused) return;
+                if (keyLaneMap.hasOwnProperty(e.code)) {
+                    triggerLane(keyLaneMap[e.code]);
+                }
+            });
+
+            const laneBtns = document.querySelectorAll('.lane-btn');
+            laneBtns.forEach(btn => {
+                const lane = parseInt(btn.getAttribute('data-lane'));
+                const handleAction = (e) => {
+                    e.preventDefault();
+                    if (!isPlaying || isPaused) return;
+                    triggerLane(lane);
+                    btn.classList.add('bg-slate-700');
+                    setTimeout(() => btn.classList.remove('bg-slate-700'), 100);
+                };
+                btn.addEventListener('touchstart', handleAction);
+                btn.addEventListener('mousedown', handleAction);
+            });
+        }
+
+        const JUDGE_LINE_Y_RATIO = 0.84;
+        const NOTE_FALL_TIME = 1.2;
+
+        function triggerLane(lane) {
+            playHitSound(lane);
+            
+            const currentTime = (audioCtx.currentTime - totalPausedTime) - startTime;
+            let closestNote = null;
+            let minDiff = 999;
+
+            for (let note of notes) {
+                if (note.lane === lane && !note.hit && !note.missed) {
+                    let diff = Math.abs(note.time - currentTime);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestNote = note;
+                    }
+                }
+            }
+
+            if (closestNote && minDiff < 0.28) {
+                closestNote.hit = true;
+                if (minDiff < 0.07) {
+                    registerHit('PERFECT', 300, 'text-emerald-400', 3);
+                } else if (minDiff < 0.13) {
+                    registerHit('GREAT', 200, 'text-sky-400', 2);
+                } else if (minDiff < 0.22) {
+                    registerHit('GOOD', 100, 'text-amber-400', 0);
+                } else {
+                    registerHit('BAD', 50, 'text-orange-400', -3);
+                }
+            }
+        }
+
+        function registerHit(type, pts, colorClass, lifeDelta) {
+            score += pts + (combo * 3);
+            combo++;
+            if (combo > maxCombo) maxCombo = combo;
+            
+            life = Math.min(100, life + lifeDelta);
+
+            if (type === 'PERFECT') stats.perfect++;
+            else if (type === 'GREAT') stats.great++;
+            else stats.good++;
+
+            updateScoreDisplay();
+            updateLifeBar();
+            showFeedback(type, colorClass);
+        }
+
+        function registerMiss() {
+            combo = 0;
+            stats.miss++;
+            life = Math.max(0, life - 12);
+            updateScoreDisplay();
+            updateLifeBar();
+            showFeedback('MISS', 'text-rose-500');
+
+            if (life <= 0) {
+                endGame();
+            }
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('score-display').innerText = String(score).padStart(6, '0');
+            const comboEl = document.getElementById('combo-display');
+            const labelEl = document.getElementById('combo-label');
+            if (combo > 1) {
+                comboEl.innerText = combo;
+                comboEl.style.opacity = '1';
+                labelEl.style.opacity = '1';
+            } else {
+                comboEl.style.opacity = '0';
+                labelEl.style.opacity = '0';
+            }
+        }
+
+        function updateLifeBar() {
+            const bar = document.getElementById('life-bar');
+            bar.style.width = `${life}%`;
+            if (life > 50) {
+                bar.className = 'h-full bg-gradient-to-r from-emerald-500 to-sky-400 w-full transition-all duration-200';
+            } else if (life > 20) {
+                bar.className = 'h-full bg-gradient-to-r from-amber-500 to-yellow-400 w-full transition-all duration-200';
+            } else {
+                bar.className = 'h-full bg-gradient-to-r from-rose-600 to-rose-400 w-full transition-all duration-200 animate-pulse';
+            }
+        }
+
+        function updateProgressBar(progress) {
+            const pBar = document.getElementById('progress-bar');
+            pBar.style.width = `${Math.min(100, Math.max(0, progress * 100))}%`;
+        }
+
+        function showFeedback(text, colorClass) {
+            const fb = document.getElementById('feedback-text');
+            fb.innerText = text;
+            fb.className = `text-3xl font-black italic transition-all duration-100 transform scale-110 ${colorClass}`;
+            setTimeout(() => {
+                fb.className = `text-3xl font-black italic transition-all duration-100 transform scale-75 opacity-0 ${colorClass}`;
+            }, 100);
+        }
+
+        function gameLoop() {
+            if (!isPlaying || isPaused) return;
+
+            scheduleBGM();
+
+            const currentTime = (audioCtx.currentTime - totalPausedTime) - startTime;
+            
+            if (songDuration > 0) {
+                updateProgressBar(currentTime / songDuration);
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const judgeY = canvas.height * JUDGE_LINE_Y_RATIO;
+            const laneWidth = canvas.width / 4;
+
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 12;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, judgeY);
+            ctx.lineTo(canvas.width, judgeY);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            let allFinished = true;
+
+            notes.forEach((note) => {
+                const timeDiff = note.time - currentTime;
+                
+                if (!note.hit && !note.missed) {
+                    allFinished = false;
+                    if (timeDiff < -0.18) {
+                        note.missed = true;
+                        registerMiss();
+                    }
+                }
+
+                if (!note.hit && !note.missed) {
+                    const progress = 1 - (timeDiff / NOTE_FALL_TIME);
+                    const noteY = progress * judgeY;
+
+                    const x = note.lane * laneWidth + laneWidth / 2;
+                    const w = laneWidth - 14;
+                    const h = 20;
+
+                    ctx.save();
+                    const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b'];
+                    ctx.fillStyle = colors[note.lane];
+                    ctx.shadowColor = colors[note.lane];
+                    ctx.shadowBlur = 14;
+
+                    ctx.beginPath();
+                    ctx.roundRect(x - w / 2, noteY - h / 2, w, h, 6);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+
+            if (notes.length > 0) {
+                const lastNoteTime = notes[notes.length - 1].time;
+                if (currentTime > lastNoteTime + beatInterval || allFinished) {
+                    endGame();
+                    return;
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            if (currentAudioSource) {
+                try { currentAudioSource.stop(); } catch(e){}
+            }
+            const bgVideo = document.getElementById('bg-video');
+            bgVideo.pause();
+
+            document.getElementById('view-result').classList.remove('hidden');
+            
+            document.getElementById('res-score').innerText = score;
+            document.getElementById('res-combo').innerText = maxCombo;
+            document.getElementById('res-perfect').innerText = stats.perfect;
+            document.getElementById('res-great').innerText = stats.great;
+            document.getElementById('res-good').innerText = stats.good;
+            document.getElementById('res-miss').innerText = stats.miss;
+
+            const totalNotes = activeChart.length;
+            const maxPossibleScore = totalNotes * 300;
+            const ratio = score / (maxPossibleScore || 1);
+            let rank = 'S';
+            if (life <= 0) rank = 'D';
+            else if (ratio < 0.6) rank = 'C';
+            else if (ratio < 0.75) rank = 'B';
+            else if (ratio < 0.9) rank = 'A';
+            else if (ratio < 0.98) rank = 'S';
+            else rank = 'SS';
+
+            document.getElementById('result-rank').innerText = rank;
+        }
+    </script>
+</body>
+</html>
